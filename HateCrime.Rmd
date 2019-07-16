@@ -1,7 +1,7 @@
 ---
 title: "Capstone Project"
 author: "Yaoli Ma"
-date: "7/12/2019"
+date: "7/16/2019"
 output: pdf_document 
 ---
 
@@ -101,8 +101,8 @@ data_2017 %>%
     scale_fill_distiller(palette = "YlOrRd",
                          direction = 1,
                          name = "Avg. Annual\nHate Crimes\nper 100k Pop.") +
-    annotate("text", x = -105, y = 22.5, 
-             label = "No Data", colour = "grey") +
+    annotate("text", -Inf, -Inf, 
+             label = "No Data", colour = "grey", hjust = -3.5, vjust = -1.5) +
     labs(
       title="U.S. Hate Crime Rates (2017)",
       caption="Source: FBI") +
@@ -130,24 +130,66 @@ for (i in 2008:2017) {
 hate_crime_agg <- hate_crime_agg %>% 
   filter(NAME %in% c(state.name, "District of Columbia"))
 
-hate_crime_agg %>% 
-  filter(NAME != "District of Columbia") %>% 
-  ggplot()+
-    geom_tile(aes(x = year, y = NAME, fill = avg_hate_crime))
+hate_crime_vol <- hate_crime_agg %>%
+  group_by(NAME) %>% 
+  summarize(volatility = sd(avg_hate_crime)) %>% 
+  arrange(desc(volatility))
+
+ggplot()+
+  geom_smooth(data =filter(hate_crime_agg, 
+                           !NAME %in% c("District of Columbia", 
+                                        "North Dakota", 
+                                        "New Jersey",
+                                        "Kentucky",
+                                        "Delaware",
+                                        "South Dakota")), 
+              aes(x = year, y = avg_hate_crime, group = NAME), 
+              color = "grey", size = 0.5, se = FALSE) +
+  geom_smooth(data =filter(hate_crime_agg, NAME == "North Dakota"), 
+              aes(x = year, y = avg_hate_crime, group = NAME), 
+              color = "#800026", size = 1, se = FALSE) +
+  annotate("text", x = 2017.2, y = 1.9877976, label = "ND", colour = "#800026", vjust = 2) +
+  geom_smooth(data =filter(hate_crime_agg, NAME == "South Dakota"), 
+              aes(x = year, y = avg_hate_crime, group = NAME), 
+              color = "#bd0026", size = 1, se = FALSE) +
+  annotate("text", x = 2017.2, y = 2.1274386, label = "SD", colour = "#bd0026", vjust = 0) +
+  geom_smooth(data =filter(hate_crime_agg, NAME == "Delaware"), 
+              aes(x = year, y = avg_hate_crime, group = NAME), 
+              color = "#fc4e2a", size = 1, se = FALSE) +
+  annotate("text", x = 2017.2, y = 3.0147442, label = "DE", colour = "#fc4e2a", vjust = 0) +
+  geom_smooth(data =filter(hate_crime_agg, NAME == "Kentucky"), 
+              aes(x = year, y = avg_hate_crime, group = NAME), 
+              color = "#fd8d3c", size = 1, se = FALSE) +
+  annotate("text", x = 2017.2, y = 8.50539316, label = "KY", colour = "#fd8d3c", vjust = 1) +
+  geom_smooth(data =filter(hate_crime_agg, NAME == "New Jersey"), 
+              aes(x = year, y = avg_hate_crime, group = NAME), 
+              color = "#feb24c", size = 1, se = FALSE) +
+  annotate("text", x = 2017.2, y = 5.49655305, label = "NJ", colour = "#feb24c", vjust = 1) +
+  labs(title="Change in U.S. Hate Crime Rates (2008-2017)",
+       subtitle = "The 5 most volatile states are colored and labeled.",
+       caption="Source: FBI",
+       x = "Year",
+       y = "Avg. Annual Hate Crimes per 100k Pop.") +
+  scale_x_continuous(breaks = c(2008:2017)) +
+  theme_minimal()
+
+
+
 ```
 
 ```{r Panel Data}
 # Census Data
 data_agg <- tibble()
-vars <- load_variables(2011, "acs5")
+vars <- load_variables(2009, "acs5")
+vars2 <- load_variables(2016, "acs5")
 
-for (i in 2012:2016) {
+for (i in 2010) {
 census_yearly <- get_acs(
   geography = "state", 
   variables = c(total_pop = "B01001_001", 
                 med_income = "B06011_001", 
-                unemployed = "B23025_005", 
-                HSdegree = "B15003_017",
+                unemployed = "B18120_012", 
+                HSdegree = "B16010_015",
                 white_poverty = "B17001A_002", 
                 white_pop = "B01001A_001"),
   year = i) %>% 
@@ -159,6 +201,49 @@ census_yearly <- get_acs(
          pct_non_white = 1 - white_pop /total_pop) %>% 
   mutate(year = i) %>% 
   select(-total_pop, -unemployed, -HSdegree, -white_poverty, -white_pop)
+data_agg <- bind_rows(data_agg, census_yearly)
+}
+
+for (i in 2011) {
+census_yearly <- get_acs(
+  geography = "state", 
+  variables = c(total_pop = "B01001_001", 
+                med_income = "B06011_001", 
+                unemployed = "B23025_005", 
+                HSdegree = "B16010_015",
+                white_poverty = "B17001A_002", 
+                white_pop = "B01001A_001"),
+  year = i) %>% 
+  select(-moe, - GEOID) %>%
+  spread(variable, estimate) %>% 
+  mutate(pct_unemployed = unemployed / total_pop,
+         pct_HSdegree = HSdegree / total_pop,
+         pct_white_poverty = white_poverty / total_pop,
+         pct_non_white = 1 - white_pop /total_pop) %>% 
+  mutate(year = i) %>% 
+  select(-total_pop, -unemployed, -HSdegree, -white_poverty, -white_pop)
+data_agg <- bind_rows(data_agg, census_yearly)
+}
+
+for (i in 2012:2016) {
+census_yearly <- get_acs(
+  geography = "state", 
+  variables = c(total_pop = "B01001_001", 
+                med_income = "B06011_001", 
+                unemployed = "B23025_005", 
+                HSdegree = "B15003_017",
+                HSdegree_alt = "B15003_018",
+                white_poverty = "B17001A_002", 
+                white_pop = "B01001A_001"),
+  year = i) %>% 
+  select(-moe, - GEOID) %>%
+  spread(variable, estimate) %>% 
+  mutate(pct_unemployed = unemployed / total_pop,
+         pct_HSdegree = (HSdegree + HSdegree_alt) / total_pop,
+         pct_white_poverty = white_poverty / total_pop,
+         pct_non_white = 1 - white_pop /total_pop) %>% 
+  mutate(year = i) %>% 
+  select(-total_pop, -unemployed, -HSdegree, -HSdegree_alt, -white_poverty, -white_pop)
 data_agg <- bind_rows(data_agg, census_yearly)
 }
 
