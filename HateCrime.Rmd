@@ -289,7 +289,7 @@ data_agg <- data_agg %>%
   left_join(non_citizen_agg, by = c("NAME", "year")) %>%
   left_join(lgbt_agg, by = c("NAME", "year")) %>%
   left_join(gini_index_agg, by = c("NAME", "year")) %>%
-  filter(!NAME %in% c("Puerto Rico", "Hawaii", "District of Columbia")) %>% 
+  filter(!NAME %in% c("Puerto Rico", "Hawaii")) %>% 
   mutate(med_income_square = med_income^2,
          pct_unemployed_square = pct_unemployed^2,
          pct_HSdegree_square = pct_HSdegree^2,
@@ -302,10 +302,13 @@ data_agg <- data_agg %>%
          pct_pop_covered = pop_covered / total_pop) %>% 
   arrange(NAME)
 
+data_agg_2 <- data_agg %>% 
+  filter(NAME != "District of Columbia")
+
 # Regression
 model_agg1 <- plm(avg_hate_crime ~ med_income + pct_unemployed + pct_HSdegree +
               pct_white_poverty + pct_non_white + gini_index + pct_non_citizen + 
-              pct_lgbt + pct_muslim + pct_pop_covered, data = data_agg, 
+              pct_lgbt + pct_muslim + pct_pop_covered, data = data_agg_2, 
               index = c("NAME", "year"), model = "within", effect = "time")
 
 model_agg2 <- plm(avg_hate_crime ~ med_income + med_income_square + pct_unemployed + 
@@ -315,7 +318,7 @@ model_agg2 <- plm(avg_hate_crime ~ med_income + med_income_square + pct_unemploy
                     pct_non_citizen + pct_non_citizen_square +
                     pct_lgbt + pct_lgbt_square + pct_muslim + pct_muslim_square +
                     pct_pop_covered, 
-              data = data_agg, 
+              data = data_agg_2, 
               index = c("NAME", "year"), model = "within", effect = "time")
 
 model_agg3 <- plm(avg_hate_crime ~ med_income + med_income_square + 
@@ -324,7 +327,7 @@ model_agg3 <- plm(avg_hate_crime ~ med_income + med_income_square +
                     pct_HSdegree * gini_index + gini_index_square + pct_non_citizen_square +
                pct_HSdegree_square +
               pct_lgbt + pct_lgbt_square + pct_muslim + pct_muslim_square + pct_pop_covered, 
-              data = data_agg, 
+              data = data_agg_2, 
               index = c("NAME", "year"), model = "within", effect = "time")
 
 stargazer(model_agg1, model_agg2, model_agg3, type='latex', title = "Regression Results",
@@ -347,7 +350,7 @@ stargazer(model_agg1, model_agg2, model_agg3, type='latex', title = "Regression 
 # Regression
 model_agg4 <- lm(avg_hate_crime ~ med_income + pct_unemployed + pct_HSdegree +
               pct_white_poverty + pct_non_white + gini_index + pct_non_citizen + 
-              pct_lgbt + pct_muslim + pct_pop_covered, data = data_agg)
+              pct_lgbt + pct_muslim + pct_pop_covered, data = data_agg_2)
 
 model_agg5 <- lm(avg_hate_crime ~ med_income + med_income_square + pct_unemployed + 
                     pct_unemployed_square + pct_HSdegree + pct_HSdegree_square +
@@ -355,14 +358,14 @@ model_agg5 <- lm(avg_hate_crime ~ med_income + med_income_square + pct_unemploye
                     pct_non_white_square + gini_index + gini_index_square +
                     pct_non_citizen + pct_non_citizen_square +
                     pct_lgbt + pct_lgbt_square + pct_muslim + pct_muslim_square +
-                    pct_pop_covered, data = data_agg)
+                    pct_pop_covered, data = data_agg_2)
 
 model_agg6 <- lm(avg_hate_crime ~ med_income + med_income_square + 
                     pct_unemployed * pct_non_citizen + pct_unemployed_square + 
                     pct_white_poverty * pct_non_white + pct_white_poverty_square + pct_non_white_square +
                     pct_HSdegree * gini_index + gini_index_square + pct_non_citizen_square + 
                     pct_HSdegree_square + pct_lgbt + pct_lgbt_square + pct_muslim + 
-                    pct_muslim_square + pct_pop_covered, data = data_agg)
+                    pct_muslim_square + pct_pop_covered, data = data_agg_2)
 
 stargazer(model_agg4, model_agg5, model_agg6, type='text', title = "Regression Results",
           header = FALSE, font.size = "small", column.sep.width = "1pt", single.row = TRUE, 
@@ -380,3 +383,17 @@ stargazer(model_agg4, model_agg5, model_agg6, type='text', title = "Regression R
   
 ```
 
+```{r Plot}
+ggplot() +
+  geom_jitter(data=filter(data_agg, NAME != "District of Columbia"), 
+              aes(x=pct_lgbt, y=avg_hate_crime)) +
+  geom_jitter(data=filter(data_agg, NAME == "District of Columbia"), 
+              aes(x=pct_lgbt, y=avg_hate_crime), color = "red") +
+  geom_smooth(data=data_agg_2, aes(x=pct_lgbt, y=avg_hate_crime)) +
+  labs(title="U.S. Hate Crime Rates and LGBT Population (2012 - 2016)",
+       caption="Sources: FBI; Gallup",
+       y = "Avg. Annual Hate Crimes per 100k Pop.",
+       x = "Pct. of LGBT Pop.") +
+  annotate("text", x=0.085, y=13, label = "District of Columbia", color="red") +
+  theme_bw()
+```
