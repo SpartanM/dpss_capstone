@@ -6,7 +6,7 @@ output: pdf_document
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE)
 library(tidyverse)
 library(tidycensus)
 library(lubridate)
@@ -85,12 +85,6 @@ data_2017 <- census_data %>%
   filter(!NAME %in% c("Puerto Rico")) 
 ```
 
-```{r Regression}
-model <- lm(avg_hate_crime ~ med_income + pct_unemployed + pct_HSdegree +
-              pct_white_poverty + pct_non_white + GINI_index + pct_non_citizen +
-              pct_lgbt + pct_muslim, data = data_2017)
-summary(model)
-```
 
 ```{r Hate Crime Map}
 data_2017 %>% 
@@ -109,11 +103,6 @@ data_2017 %>%
     theme_void()
 ```
 
-```{r Plot}
-
-```
-
-
 
 ```{r Change in Hate Crimes Plot}
 hate_crime_agg <- tibble()
@@ -121,9 +110,9 @@ hate_crime_agg <- tibble()
 for (i in 2008:2017) {
   name <- paste("table_12_agency_hate_crime_reporting_by_state_", i, ".xls", sep = "")
   hate_crime_yearly <- read_excel(name, skip = 4, col_names = FALSE) %>% 
-    rename("NAME" = "...1") %>% 
-    mutate(avg_hate_crime = ...5 / ...3 * 100000, year = i) %>% 
-    select(NAME, year, avg_hate_crime) 
+    rename("NAME" = "...1", "pop_covered" = "...3") %>% 
+    mutate(avg_hate_crime = ...5 / pop_covered * 100000, year = i) %>% 
+    select(NAME, year, avg_hate_crime, pop_covered) 
   hate_crime_agg <- bind_rows(hate_crime_agg, hate_crime_yearly)
 }
 
@@ -165,65 +154,43 @@ ggplot()+
               aes(x = year, y = avg_hate_crime, group = NAME), 
               color = "#feb24c", size = 1, se = FALSE) +
   annotate("text", x = 2017.2, y = 5.49655305, label = "NJ", colour = "#feb24c", vjust = 1) +
-  labs(title="Change in U.S. Hate Crime Rates (2008-2017)",
-       subtitle = "The 5 most volatile states are colored and labeled.",
+  labs(title="Changes in U.S. Hate Crime Rates (2008 - 2017)",
+       subtitle = "The five most volatile states are colored and labeled.",
        caption="Source: FBI",
        x = "Year",
        y = "Avg. Annual Hate Crimes per 100k Pop.") +
   scale_x_continuous(breaks = c(2008:2017)) +
   theme_minimal()
 
-
-
 ```
 
-```{r Panel Data}
+```{r Panel Data, results='asis'}
 # Census Data
 data_agg <- tibble()
-vars <- load_variables(2009, "acs5")
-vars2 <- load_variables(2016, "acs5")
+#vars <- load_variables(2009, "acs5")
+#vars2 <- load_variables(2016, "acs5")
 
-for (i in 2010) {
-census_yearly <- get_acs(
-  geography = "state", 
-  variables = c(total_pop = "B01001_001", 
-                med_income = "B06011_001", 
-                unemployed = "B18120_012", 
-                HSdegree = "B16010_015",
-                white_poverty = "B17001A_002", 
-                white_pop = "B01001A_001"),
-  year = i) %>% 
-  select(-moe, - GEOID) %>%
-  spread(variable, estimate) %>% 
-  mutate(pct_unemployed = unemployed / total_pop,
-         pct_HSdegree = HSdegree / total_pop,
-         pct_white_poverty = white_poverty / total_pop,
-         pct_non_white = 1 - white_pop /total_pop) %>% 
-  mutate(year = i) %>% 
-  select(-total_pop, -unemployed, -HSdegree, -white_poverty, -white_pop)
-data_agg <- bind_rows(data_agg, census_yearly)
-}
 
-for (i in 2011) {
-census_yearly <- get_acs(
-  geography = "state", 
-  variables = c(total_pop = "B01001_001", 
-                med_income = "B06011_001", 
-                unemployed = "B23025_005", 
-                HSdegree = "B16010_015",
-                white_poverty = "B17001A_002", 
-                white_pop = "B01001A_001"),
-  year = i) %>% 
-  select(-moe, - GEOID) %>%
-  spread(variable, estimate) %>% 
-  mutate(pct_unemployed = unemployed / total_pop,
-         pct_HSdegree = HSdegree / total_pop,
-         pct_white_poverty = white_poverty / total_pop,
-         pct_non_white = 1 - white_pop /total_pop) %>% 
-  mutate(year = i) %>% 
-  select(-total_pop, -unemployed, -HSdegree, -white_poverty, -white_pop)
-data_agg <- bind_rows(data_agg, census_yearly)
-}
+# for (i in 2011) {
+# census_yearly <- get_acs(
+#   geography = "state", 
+#   variables = c(total_pop = "B01001_001", 
+#                 med_income = "B06011_001", 
+#                 unemployed = "B23025_005", 
+#                 HSdegree = "B16010_015",
+#                 white_poverty = "B17001A_002", 
+#                 white_pop = "B01001A_001"),
+#   year = i) %>% 
+#   select(-moe, - GEOID) %>%
+#   spread(variable, estimate) %>% 
+#   mutate(pct_unemployed = unemployed / total_pop,
+#          pct_HSdegree = HSdegree / total_pop,
+#          pct_white_poverty = white_poverty / total_pop,
+#          pct_non_white = 1 - white_pop /total_pop) %>% 
+#   mutate(year = i) %>% 
+#   select(-total_pop, -unemployed, -HSdegree, -white_poverty, -white_pop)
+# data_agg <- bind_rows(data_agg, census_yearly)
+# }
 
 for (i in 2012:2016) {
 census_yearly <- get_acs(
@@ -243,7 +210,7 @@ census_yearly <- get_acs(
          pct_white_poverty = white_poverty / total_pop,
          pct_non_white = 1 - white_pop /total_pop) %>% 
   mutate(year = i) %>% 
-  select(-total_pop, -unemployed, -HSdegree, -HSdegree_alt, -white_poverty, -white_pop)
+  select(-unemployed, -HSdegree, -HSdegree_alt, -white_poverty, -white_pop)
 data_agg <- bind_rows(data_agg, census_yearly)
 }
 
@@ -275,6 +242,12 @@ for (i in 2012:2016) {
   non_citizen_agg <- bind_rows(non_citizen_agg, non_citizen_yearly)
 }
 
+# Ideology Data
+ideology_agg <- read_dta("stateideology_v2018.dta") %>% 
+  rename("NAME" = "statename", "citizen_ideology" = "citi6016") %>% 
+  select(NAME, year, citizen_ideology) %>% 
+  filter(year == c(2012:2016))
+
 # Religion Data
 religion_agg <- read_excel("GallupAnalytics_Export_20190712_093533.xlsx", skip = 6) %>% 
   rename("NAME" = "Geography", "pct_muslim" = "Muslim", "year" = "Time") %>%
@@ -294,13 +267,55 @@ data_agg <- data_agg %>%
   left_join(non_citizen_agg, by = c("NAME", "year")) %>%
   left_join(lgbt_agg, by = c("NAME", "year")) %>%
   left_join(gini_index_agg, by = c("NAME", "year")) %>%
-  filter(!NAME %in% c("Puerto Rico", "Hawaii")) %>% 
+  filter(!NAME %in% c("Puerto Rico", "Hawaii", "District of Columbia")) %>% 
+  mutate(med_income_square = med_income^2,
+         pct_unemployed_square = pct_unemployed^2,
+         pct_HSdegree_square = pct_HSdegree^2,
+         pct_white_poverty_square = pct_white_poverty^2,
+         pct_non_white_square = pct_non_white^2,
+         gini_index_square = gini_index^2,
+         pct_non_citizen_square = pct_non_citizen^2,
+         pct_lgbt_square = pct_lgbt^2,
+         pct_muslim_square = pct_muslim^2,
+         pct_pop_covered = pop_covered / total_pop) %>% 
   arrange(NAME)
 
 # Regression
-model_agg <- plm(avg_hate_crime ~ med_income + pct_unemployed + pct_HSdegree +
+model_agg1 <- plm(avg_hate_crime ~ med_income + pct_unemployed + pct_HSdegree +
               pct_white_poverty + pct_non_white + gini_index + pct_non_citizen + 
-              pct_lgbt + pct_muslim, data = data_agg, 
+              pct_lgbt + pct_muslim + pct_pop_covered, data = data_agg, 
               index = c("NAME", "year"), model = "within", effect = "twoways")
-summary(model_agg)
+
+model_agg2 <- plm(avg_hate_crime ~ med_income + pct_unemployed + 
+                    pct_HSdegree + pct_HSdegree_square +
+              pct_white_poverty + pct_non_white + 
+                gini_index +
+                pct_non_citizen +
+              pct_lgbt + pct_lgbt_square + pct_muslim + pct_pop_covered, 
+              data = data_agg, 
+              index = c("NAME", "year"), model = "within", effect = "twoways")
+
+model_agg3 <- plm(avg_hate_crime ~ med_income +
+                    pct_unemployed * pct_non_citizen + 
+                    pct_white_poverty + pct_non_white +
+                    pct_HSdegree * gini_index +
+               pct_HSdegree_square +
+              pct_lgbt + pct_lgbt_square + pct_muslim + pct_pop_covered, 
+              data = data_agg, 
+              index = c("NAME", "year"), model = "within", effect = "twoways")
+
+stargazer(model_agg1, model_agg2, model_agg3, type='latex', title = "Regression Results",
+          header = FALSE, font.size = "small", column.sep.width = "1pt",
+          dep.var.labels = "Avg. Annual Hate Crimes per 100k Pop.",
+          covariate.labels = c("Median Income", "Pct. Unemployed", "Pct. Only HS degree", 
+              "Pct. Only HS degree$^{2}$", "Pct. White below poverty line", "Pct. Non-white",
+              "GINI index", "Pct. Non-citizen", "Pct. LGBT", "Pct. LGBT$^{2}$",
+              "Pct. Muslim", "Pct. Pop. Covered", 
+              "Pct. Unemployed * Pct. Non-citizen", 
+              "Pct. Only HS degree * GINI index"))
 ```
+
+```{r Plot}
+
+```
+
