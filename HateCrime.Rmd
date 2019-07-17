@@ -3,7 +3,7 @@ title: "Hate Crime in the United States"
 author: "Yaoli Ma"
 date: "7/16/2019"
 output: pdf_document
-indent: true
+geometry: margin=1in
 ---
 
 ```{r setup, include=FALSE}
@@ -233,10 +233,10 @@ census_yearly <- get_acs(
   year = i) %>% 
   select(-moe, - GEOID) %>%
   spread(variable, estimate) %>% 
-  mutate(pct_unemployed = unemployed / total_pop,
-         pct_HSdegree = (HSdegree + HSdegree_alt) / total_pop,
-         pct_white_poverty = white_poverty / total_pop,
-         pct_non_white = 1 - white_pop /total_pop) %>% 
+  mutate(pct_unemployed = unemployed / total_pop * 100,
+         pct_HSdegree = (HSdegree + HSdegree_alt) / total_pop * 100,
+         pct_white_poverty = white_poverty / total_pop * 100,
+         pct_non_white = 100 - white_pop /total_pop * 100) %>% 
   mutate(year = i) %>% 
   select(-unemployed, -HSdegree, -HSdegree_alt, -white_poverty, -white_pop)
 data_agg <- bind_rows(data_agg, census_yearly)
@@ -263,7 +263,7 @@ for (i in 2012:2016) {
   name <- paste("raw_data_", i, ".csv", sep = "")
   non_citizen_yearly <- read_csv(name, skip = 2) %>% 
     rename("NAME" = "Location") %>%
-    mutate(pct_non_citizen = `Non-Citizen` / Total,
+    mutate(pct_non_citizen = `Non-Citizen` / Total * 100,
            year = i) %>% 
     select(NAME, pct_non_citizen, year) %>% 
     filter(NAME %in% c(state.name, "District of Columbia"))
@@ -279,13 +279,13 @@ ideology_agg <- read_dta("stateideology_v2018.dta") %>%
 # Religion Data
 religion_agg <- read_excel("GallupAnalytics_Export_20190712_093533.xlsx", skip = 6) %>% 
   rename("NAME" = "Geography", "pct_muslim" = "Muslim", "year" = "Time") %>%
-  mutate(year = as.numeric(year)) %>% 
+  mutate(year = as.numeric(year), pct_muslim = pct_muslim * 100) %>% 
   select(1, 2, 7)
 
 # LGBT Data
 lgbt_agg <- read_excel("GallupAnalytics_Export_20190712_095942.xlsx", skip = 6) %>% 
   rename("NAME" = "Geography", "pct_lgbt" = "Yes, do", "year" = "Time") %>% 
-  mutate(year = as.numeric(year)) %>% 
+  mutate(year = as.numeric(year), pct_lgbt = pct_lgbt * 100) %>% 
   select(1, 2, 5)
 
 # Merge
@@ -402,7 +402,7 @@ ggplot() +
        caption="Source: FBI, Gallup",
        y = "Avg. Annual Hate Crimes per 100k pop.",
        x = "Pct. of LGBT pop.") +
-  annotate("text", x=0.085, y=13, label = "District of Columbia", color="red") +
+  annotate("text", x=8.5, y=13, label = "District of Columbia", color="red") +
   theme_bw()
 ```
 
