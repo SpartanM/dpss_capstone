@@ -1,9 +1,11 @@
 ---
-title: "Hate Crime in the United States"
+title: "Hate Crimes in the United States"
 author: "Yaoli Ma"
 date: "7/16/2019"
 output: pdf_document
-geometry: margin=1in
+geometry: margin=0.7in
+indent: true
+fontsize: 12pt
 ---
 
 ```{r setup, include=FALSE}
@@ -15,10 +17,11 @@ library(sf)
 library(stargazer)
 library(haven)
 library(readxl)
-library(plm)
 ```
 
-Hate crime, according to FBI, is a “criminal offense against a person or property motivated in whole or in part by an offender’s bias against a race, religion, disability, sexual orientation, ethnicity, gender, or gender identity.” This policy memo aims to examine the nature and recent developments of hate crimes in the U.S. using data drawn from four sources. The hate crime data for the years 2008 - 2017 comes from FBI’s Uniform Crime Reports (UCR). Participation in the UCR Program is mandated for federal law enforcement agencies, but is voluntary for their local, state, and tribal counterparts. For example, the state of Hawaii does not report any data to UCR. Therefore, the difference in the likelihood of different non-federal law enforcement agencies to report hate crimes to UCR may cause potential biases. In addition, nine state-level socioeconomic factors, including median household income, percentage of population unemployed, percentage of population with only high school degree, percentage of white population below poverty line, GINI index, percentage of non-white population, percentage of non-citizen population, percentage of LGBT population, and percentage of Muslim population, are collected from Census Bureau’s American Community Survey (ACS), Kaiser Family Foundation and Gallup’s U.S. daily tracking survey.
+Hate crime, according to FBI, is a “criminal offense against a person or property motivated in whole or in part by an offender’s bias against a race, religion, disability, sexual orientation, ethnicity, gender, or gender identity.” This policy memo aims to examine the nature and recent developments of hate crimes in the U.S. The results of the analysis indicate that hate crime rates vary substantially across states during the years 2008 – 2017 and that certain socioeconomic factors such as education levels and LGBT demographics have strong influences on the hate crime rates.
+
+The data for this policy memo is drawn from four sources. The hate crime data for 2008 - 2017 comes from FBI’s Uniform Crime Reports (UCR). Participation in the UCR Program is mandated for federal law enforcement agencies, but is voluntary for their local, state, and tribal counterparts. For example, the state of Hawaii does not report any data to UCR. Therefore, the difference in the likelihood of non-federal law enforcement agencies to report hate crimes to UCR may cause potential biases. In addition, nine state-level socioeconomic factors, including median household income, percentage of population unemployed, percentage of population with only high school degree, percentage of white population below poverty line, GINI index, percentage of non-white population, percentage of non-citizen population, percentage of LGBT population, and percentage of Muslim population, are collected from Census Bureau’s American Community Survey (ACS), Kaiser Family Foundation and Gallup’s U.S. daily tracking survey.
 
 ```{r Data Loading and Prep, results='hide'}
 # Census Data
@@ -135,7 +138,7 @@ stargazer(model_1, model_2, model_3, type='text', title = "Regression Results",
 ```
 
 
-```{r Hate Crime Map}
+```{r Hate Crime Map, fig.align='center'}
 data_2017 %>% 
   filter(NAME != "District of Columbia") %>% 
   st_transform(2163) %>%
@@ -152,9 +155,9 @@ data_2017 %>%
     theme_void()
 ```
 
-The hate crime rate map (Figure 1) illustrates that there are notable differences in the number of hate crimes per 100,000 residents for each state. Some states, such as Kentucky, Washington, and Massachusetts, saw hate crime rates that are higher than 6 per 100,000, while others like Mississippi reported as low as 0.15. The District of Columbia (not shown in the map) witnessed an enormously high hate crime rate—27.81—possibly due to a heavy concentration of political events, whose participants are generally not D.C. residents. The hate crime rates of D.C. are therefore excluded from the analysis in this policy memo unless otherwise noted. Further examination of hate crime rates in the years 2008-2017 (Figure 2) revels that the volatility of the hate crime rates varies greatly from state to state. Five most volatile states--North Dakota, New Jersey, Kentucky, Delaware, South Dakota—are colored and labeled below.
+The hate crime rate map (Figure 1) illustrates that in 2017, there are notable differences in the number of hate crimes per 100,000 residents for each state. Some states, such as Kentucky, Washington, and Massachusetts, saw hate crime rates that are higher than 6 per 100,000, while others like Mississippi reported as low as 0.15. The District of Columbia (not shown in the map) witnessed an enormously high hate crime rate—27.81—possibly due to a heavy concentration of political events, whose participants are generally not D.C. residents. The hate crime rates of D.C. are therefore excluded from the analysis in this policy memo unless otherwise noted. Further examination of hate crime rates in the years 2008-2017 (Figure 2) reveals that the volatility of the hate crime rates varies greatly from state to state. Five most volatile states--North Dakota, New Jersey, Kentucky, Delaware, South Dakota—are colored and labeled below.
 
-```{r Change in Hate Crimes Plot}
+```{r Change in Hate Crimes Plot, fig.align='center'}
 hate_crime_agg <- tibble()
 
 for (i in 2008:2017) {
@@ -214,9 +217,9 @@ ggplot()+
 
 ```
 
-In order to assess whether the socioeconomic indicators exert significant influences on the hate crime rates across the country, this policy memo applies multivariate linear regression models with time fixed effects to panel data composed of hate crime rates and aforementioned socioeconomic factors for 49 states (excluding Hawaii) during the years 2012 - 2016. This approach allows the estimation of the independent impact that each variable have while controlling for nationwide shocks such as the 2016 Presidential Election. An additional independent variable, the percentage of population covered by law enforcement agencies reporting to the Hate Crime Statistics Program, is included in the model to control for the potential differences in the probability of hate crimes being reported in each state. 
+In order to assess whether the socioeconomic indicators exert significant influences on the hate crime rates across the country, this policy memo applies multivariate linear regression models with time and state fixed effects to panel data composed of hate crime rates and aforementioned socioeconomic factors for 49 states (excluding Hawaii) during the years 2012 - 2016. This approach allows for the estimation of the independent impact that each variable have while controlling for time-invariant characteristics associated with specific states as well as nationwide shocks such as the 2016 Presidential Election. An additional independent variable, the percentage of population covered by law enforcement agencies reporting to the Hate Crime Statistics Program, is included in the model to control for the potential differences in the probability of hate crimes being reported in each state. 
 
-```{r Panel Data Prep and Regression (with time FE), results='asis'}
+```{r Panel Data Prep and Regression (with time FE), results='asis', fig.align='center'}
 # Census Data
 data_agg <- tibble()
 
@@ -251,7 +254,7 @@ for (i in 12:16) {
     select(3:4) %>% 
     rename("NAME" = "GEO.display-label", "gini_index" = "HD01_VD01") %>% 
     mutate(year = as.numeric(paste("20", i, sep = "")),
-           gini_index = as.numeric(gini_index)) %>% 
+           gini_index = as.numeric(gini_index) * 100) %>% 
     filter(NAME != "Geography")
   gini_index_agg <- bind_rows(gini_index_agg, gini_index_yearly)
 }
@@ -311,35 +314,40 @@ data_agg <- data_agg %>%
 data_agg_2 <- data_agg %>% 
   filter(NAME != "District of Columbia")
 
-# Regression
-model_agg1 <- plm(avg_hate_crime ~ med_income + pct_unemployed + pct_HSdegree +
+# Regression (with lm function)
+model_agg1 <- lm(avg_hate_crime ~ med_income + pct_unemployed + pct_HSdegree +
               pct_white_poverty + pct_non_white + gini_index + pct_non_citizen + 
-              pct_lgbt + pct_muslim + pct_pop_covered, data = data_agg_2, 
-              index = c("NAME", "year"), model = "within", effect = "time")
+              pct_lgbt + pct_muslim + pct_pop_covered + factor(NAME) + factor(year), data = data_agg_2)
 
-model_agg2 <- plm(avg_hate_crime ~ med_income + med_income_square + pct_unemployed + 
+model_agg2 <- lm(avg_hate_crime ~ med_income + med_income_square + pct_unemployed + 
                     pct_unemployed_square + pct_HSdegree + pct_HSdegree_square +
                     pct_white_poverty + pct_white_poverty_square + pct_non_white + 
                     pct_non_white_square + gini_index + gini_index_square +
                     pct_non_citizen + pct_non_citizen_square +
                     pct_lgbt + pct_lgbt_square + pct_muslim + pct_muslim_square +
-                    pct_pop_covered, 
-              data = data_agg_2, 
-              index = c("NAME", "year"), model = "within", effect = "time")
+                    pct_pop_covered + factor(NAME) + factor(year), 
+              data = data_agg_2)
 
-model_agg3 <- plm(avg_hate_crime ~ med_income + med_income_square + 
+model_agg3 <- lm(avg_hate_crime ~ med_income + med_income_square + 
                     pct_unemployed * pct_non_citizen + pct_unemployed_square + 
                     pct_white_poverty * pct_non_white + pct_white_poverty_square + pct_non_white_square +
                     pct_HSdegree + gini_index + gini_index_square + pct_non_citizen_square +
                pct_HSdegree_square +
-              pct_lgbt + pct_lgbt_square + pct_muslim + pct_muslim_square + pct_pop_covered, 
-              data = data_agg_2, 
-              index = c("NAME", "year"), model = "within", effect = "time")
+              pct_lgbt + pct_lgbt_square + pct_muslim + pct_muslim_square + pct_pop_covered + factor(NAME) + factor(year), 
+              data = data_agg_2)
 
-stargazer(model_agg1, model_agg2, model_agg3, type='latex', title = "Regression Results",
-          header = FALSE, font.size = "small", column.sep.width = "1pt", single.row = TRUE, 
+model_agg4 <- lm(avg_hate_crime ~ med_income +  
+                    pct_unemployed * pct_non_citizen +  
+                    pct_white_poverty * pct_non_white + 
+                    pct_HSdegree + gini_index + 
+              pct_lgbt +  pct_muslim + pct_pop_covered + factor(NAME) + factor(year), 
+              data = data_agg_2)
+
+stargazer(model_agg1, model_agg4, model_agg2, model_agg3, type='latex', title = "Regression Results",
+          header = FALSE, font.size = "scriptsize", column.sep.width = "-10pt", single.row = TRUE,
+          omit = "factor",
           dep.var.labels = "Avg. Annual Hate Crimes per 100k Pop.",
-          notes = "Time fixed effects not shown.",
+          notes = "Time and state fixed effects not shown.",
           covariate.labels = c("Median Income", "Median Income$^{2}$", "Pct. Unemployed", 
                                "Pct. Unemployed$^{2}$", "Pct. Only HS degree", 
                                "Pct. Only HS degree$^{2}$", "Pct. White poverty", 
@@ -351,15 +359,15 @@ stargazer(model_agg1, model_agg2, model_agg3, type='latex', title = "Regression 
                                "Pct. White poverty * Pct. Non-white"))
 ```
 
-The results of the multivariate liner regressions are shown in Table 1. Model 1 presents the effects of each of the indicators on hate crime rates, excluding moderating and nonlinear effects. In this model, the first seven variables have significant effects on the hate crime rates. By contrast, the percentage of LGBT population and that of Muslim population is not strongly related to hate crime rates. Model 2, incorporating squared terms for each of the nine socioeconomic indicators, suggests that the percentage of population unemployed, the percentage of non-white population, the percentage of non-citizen population, and the percentage of LGBT population have nonlinear effects on hate crime rates. Model 3 adds interaction terms for unemployed population and non-citizen population, white population in poverty and non-white population, respectively. Those interaction terms are designed to determine whether the effects of immigration and racial diversity are moderated by economic factors. The results provide no support for such hypothesis.
+The results of the multivariate linear regressions are shown in Table 1. Model 1 presents the effects of each of the indicators on hate crime rates, excluding moderating and nonlinear effects. In this model, the median household income and the percentage of non-citizen population have some effects on the hate crime rates. Model 2 adds interaction terms for unemployed population and non-citizen population, white population in poverty and non-white population, respectively. Those interaction terms are designed to determine whether the effects of immigration and racial diversity are moderated by economic factors. The results provide no support for such hypotheses. Model 3, incorporating squared terms for each of the nine socioeconomic indicators, suggests that the education level (represented by percentage of population with only high school degree) and the percentage of LGBT population have nonlinear effects on hate crime rates. Model 4 includes both the moderating and nonlinear effects, and its results are similar to that of model 3. It can be reasonably concluded that certain state-level socioeconomic factors, especially LGBT demographics, have significant influences on the hate crime rates.
 
 ```{r Panel Data Regression without fixed effects, eval = FALSE}
 # Regression
-model_agg4 <- lm(avg_hate_crime ~ med_income + pct_unemployed + pct_HSdegree +
+model_agg5 <- lm(avg_hate_crime ~ med_income + pct_unemployed + pct_HSdegree +
               pct_white_poverty + pct_non_white + gini_index + pct_non_citizen + 
               pct_lgbt + pct_muslim + pct_pop_covered, data = data_agg_2)
 
-model_agg5 <- lm(avg_hate_crime ~ med_income + med_income_square + pct_unemployed + 
+model_agg6 <- lm(avg_hate_crime ~ med_income + med_income_square + pct_unemployed + 
                     pct_unemployed_square + pct_HSdegree + pct_HSdegree_square +
                     pct_white_poverty + pct_white_poverty_square + pct_non_white + 
                     pct_non_white_square + gini_index + gini_index_square +
@@ -367,14 +375,14 @@ model_agg5 <- lm(avg_hate_crime ~ med_income + med_income_square + pct_unemploye
                     pct_lgbt + pct_lgbt_square + pct_muslim + pct_muslim_square +
                     pct_pop_covered, data = data_agg_2)
 
-model_agg6 <- lm(avg_hate_crime ~ med_income + med_income_square + 
+model_agg7 <- lm(avg_hate_crime ~ med_income + med_income_square + 
                     pct_unemployed * pct_non_citizen + pct_unemployed_square + 
                     pct_white_poverty * pct_non_white + pct_white_poverty_square + pct_non_white_square +
                     pct_HSdegree + gini_index + gini_index_square + pct_non_citizen_square + 
                     pct_HSdegree_square + pct_lgbt + pct_lgbt_square + pct_muslim + 
                     pct_muslim_square + pct_pop_covered, data = data_agg_2)
 
-stargazer(model_agg4, model_agg5, model_agg6, type='text', title = "Regression Results",
+stargazer(model_agg5, model_agg6, model_agg7, type='text', title = "Regression Results",
           header = FALSE, font.size = "small", column.sep.width = "1pt", single.row = TRUE, 
           dep.var.labels = "Avg. Annual Hate Crimes per 100k Pop.",
           covariate.labels = c("Median Income", "Median Income$^{2}$", "Pct. Unemployed", 
@@ -390,7 +398,7 @@ stargazer(model_agg4, model_agg5, model_agg6, type='text', title = "Regression R
 ```
 
 
-```{r Plot}
+```{r Plot, fig.align='center'}
 ggplot() +
   geom_jitter(data=filter(data_agg, NAME != "District of Columbia"), 
               aes(x=pct_lgbt, y=avg_hate_crime)) +
@@ -406,4 +414,4 @@ ggplot() +
   theme_bw()
 ```
 
-Given the fact that the percent of LGBT population is not statistically significant in model 1 but highly significant in models 2 and 3, this policy memo provides further analysis of its relationship with hate crime rates. Figure 3 includes data points for 49 states as well as D.C. It is evident that D.C. is an extreme outlier in terms of both LGBT population and hate crime rates. The introduction of a nonlinear trend line using a quadratic function indicates that, with the increase of the percentage of LGBT population, hate crime rates first decrease and then increase. It remains to be seen, though, whether this interesting finding can be backed up by some theories regarding its causal mechanism.
+Given the fact that the percent of LGBT population is not statistically significant in models 1 and 2 but highly significant in models 3 and 4, this policy memo provides further analysis of its relationship with hate crime rates. Figure 3 includes data points for 49 states as well as D.C. It is evident that D.C. is an extreme outlier in terms of both LGBT population and hate crime rates. The introduction of a nonlinear trend line using a quadratic function shows that, with the increase of the percentage of LGBT population, hate crime rates first decrease and then increase. One may attribute the phenomena that states with smaller LGBT population have higher hate crime rates to the fact that LGBT people tend to avoid those states that are known to have higher hate crime rates. It remains to be seen, though, whether a convincing explanation can be found for the phenomena that states with larger LGBT population also have higher hate crime rates.
